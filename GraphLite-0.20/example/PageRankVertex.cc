@@ -67,11 +67,11 @@ public:
         unsigned long long from;
         unsigned long long to;
         double weight = 0;
-        
+
         double value = 1;
         int outdegree = 0;
-        
-        const char *line= getEdgeLine();
+
+        const char *line= getEdgeLine();        //FIXME: offset作用
 
         // Note: modify this if an edge weight is to be read
         //       modify the 'weight' variable
@@ -109,7 +109,9 @@ public:
         char s[1024];
 
         for (ResultIterator r_iter; ! r_iter.done(); r_iter.next() ) {
+            //// 引用、指针作为实参地址传递的区别
             r_iter.getIdValue(vid, &value);
+            //n=写入buffer字符数
             int n = sprintf(s, "%lld: %f\n", (unsigned long long)vid, value);
             writeNextResLine(s, n);
         }
@@ -120,8 +122,8 @@ public:
 class VERTEX_CLASS_NAME(Aggregator): public Aggregator<double> {
 public:
     void init() {
-        m_global = 0;
-        m_local = 0;
+        m_global = 0;           //master：aggregator value
+        m_local = 0;            //worker：aggregator value
     }
     void* getGlobal() {
         return &m_global;
@@ -153,16 +155,21 @@ public:
                     voteToHalt(); return;
                 }
             }
-
+            //calculate pagerank in current superste
             double sum = 0;
             for ( ; ! pmsgs->done(); pmsgs->next() ) {
                 sum += pmsgs->getValue();
             }
             val = 0.15 + 0.85 * sum;
 
+            //上一次的超步结果的value - 当前val的收敛性判断
             double acc = fabs(getValue() - val);
-            accumulateAggr(0, &acc);
+            accumulateAggr(0, &acc);                //'0', which is the aggregator ID.
         }
+
+        //1.change currentNode vertexValue (return by pointer)
+        //2.send the same messageValue to outedge-target vertex:
+        //                         value = my_pangerank / my_outedge
         * mutableValue() = val;
         const int64_t n = getOutEdgeIterator().size();
         sendMessageToAllNeighbors(val / n);
@@ -194,9 +201,9 @@ public:
         m_pin_path = argv[1];
         m_pout_path = argv[2];
 
-        aggregator = new VERTEX_CLASS_NAME(Aggregator)[1];
+        aggregator = new VERTEX_CLASS_NAME(Aggregator)[1];   //// allocate memory for the Aggregator
         regNumAggr(1);
-        regAggr(0, &aggregator[0]);
+        regAggr(0, &aggregator[0]);             ////        regAggr(0, &aggregator[0]);
     }
 
     void term() {
@@ -221,3 +228,4 @@ extern "C" void destroy_graph(Graph* pobject) {
     delete ( VERTEX_CLASS_NAME(InputFormatter)* )(pobject->m_pin_formatter);
     delete ( VERTEX_CLASS_NAME(Graph)* )pobject;
 }
+
