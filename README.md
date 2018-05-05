@@ -4,6 +4,6 @@ GraphLite version 0.20
 example:  
 1.pageRank   
 2.triangleCount   
-3.shortestPath   
-
-
+3.shortestPath    
+4.kcore  
+5....
